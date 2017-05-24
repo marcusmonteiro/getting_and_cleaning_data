@@ -77,13 +77,67 @@ MakeTidyDataset <- function() {
   data.merged.set <- gather(data.merged.set, Feature, Measurement, 
                             `tBodyAcc-mean()-X`:`fBodyBodyGyroJerkMag-std()`)
   
-  print(str(data.merged.set))
+  ### From: https://github.com/benjamin-chan/GettingAndCleaningData/blob/master/Project/run_analysis.Rmd
+  ###
+  grepthis <- function(regex) {
+    grepl(regex, data.merged.set$Feature)
+  }
+  n <- 2
+  y <- matrix(seq(1, n), nrow = n)
+  x <- matrix(c(grepthis('^t'), grepthis('^f')), ncol = nrow(y))
+  data.merged.set <- mutate(data.merged.set, Domain = 
+                              factor(x %*% y, labels = c('Time', 'Frequency')))
+  
+  x <- matrix(c(grepthis('Acc'), grepthis('Gyro')), ncol = nrow(y))
+  data.merged.set <- mutate(data.merged.set, Instrument = 
+                              factor(x %*% y, labels = c('Accelerometer', 'Gyroscope')))
+  
+  x <- matrix(c(grepthis('BodyAcc'), grepthis('GravityAcc')), ncol = nrow(y))
+  data.merged.set <- mutate(data.merged.set, Acceleration = 
+                              factor(x %*% y, labels = 
+                                       c(NA, 'Body', 'Gravity')))
+  
+  x <- matrix(c(grepthis('mean()'), grepthis('std()')), ncol = nrow(y))
+  data.merged.set <- mutate(data.merged.set, Variable = 
+                              factor(x %*% y, labels = c('Mean', 'StandardDeviation')))
+  
+  data.merged.set <- mutate(data.merged.set, Jerk = 
+                              factor(grepthis('Jerk'), labels = c(NA, 'Jerk')))
+  
+  data.merged.set <- mutate(data.merged.set, Magnitude = 
+                              factor(grepthis('Mag'), labels = c(NA, 'Magnitude')))
+  
+  n <- 3
+  y <- matrix(seq(1, n), nrow=n)
+  x <- matrix(c(grepthis("-X"), grepthis("-Y"), grepthis("-Z")), ncol=nrow(y))
+  data.merged.set <- mutate(data.merged.set, Axis = 
+                              factor(x %*% y, labels = c(NA, 'X', 'Y', 'Z')))
+  
+  data.merged.set <- select(
+    data.merged.set, -Measurement, everything(), -Feature)
+  data.merged.set <- select(
+    data.merged.set, Subject, Activity, Variable, Axis, everything())
+
+  ### 
+  
+  data.merged.set <- 
+    data.merged.set %>%
+    group_by(Subject, Activity, Variable, Axis, Domain, Instrument,
+             Acceleration, Jerk, Magnitude) %>%
+    summarise(MeasurementCount = n(), AverageMeasurement = mean(Measurement))
+  
   data.merged.set
 }
 
 run <- function() {
   print(LoadRequiredPackages())
   DownloadDataset()
-  file.remove('foo.csv')
-  write.csv(MakeTidyDataset(), file = 'foo.csv')
+  tidyDataSet <- MakeTidyDataset()
+  file.name <- 'Tidy_UCI_HAR_Dataset.txt'
+  if (file.exists(file.name)) {
+    file.remove(file.name)
+  }
+  write.table(tidyDataSet, file = file.name, row.names = FALSE)
 }
+
+run()

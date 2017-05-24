@@ -3,7 +3,7 @@ LoadRequiredPackages <- function() {
   if (!require('pacman')) {
     install.packages('pacman')
   }
-  pacman::p_load(dplyr, readr)
+  pacman::p_load(data.table, dplyr, dtplyr, readr, tidyr)
 }
 
 dataset.dir <- 'UCI HAR Dataset'
@@ -72,6 +72,12 @@ MakeTidyDataset <- function() {
   data.merged.subject <- bind_cols(data.merged.subject, data.merged.activity)
   data.merged.set <- bind_cols(data.merged.subject, data.merged.set)
   
+  data.merged.set$Activity <- as.factor(data.merged.set$Activity)
+  
+  data.merged.set <- gather(data.merged.set, Feature, Measurement, 
+                            `tBodyAcc-mean()-X`:`fBodyBodyGyroJerkMag-std()`)
+  
+  print(str(data.merged.set))
   data.merged.set
 }
 
